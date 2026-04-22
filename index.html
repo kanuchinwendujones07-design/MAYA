@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VRA.SZ | OFFICIAL STORE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://js.paystack.co/v2/inline.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@400;600;900&display=swap');
+        
+        :root { --orange-btn: #FF8C00; }
+        body { background: #fff; font-family: 'Inter', sans-serif; color: #000; overflow-x: hidden; }
+        .hidden { display: none !important; }
+
+        /* HERO Section */
+        .hero-section { height: 80vh; background: #000; position: relative; overflow: hidden; margin-bottom: 50px; }
+        .hero-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+        .hero-overlay { position: absolute; bottom: 60px; left: 40px; }
+        .hero-title { font-family: 'Syncopate', sans-serif; font-size: clamp(2.5rem, 8vw, 4.5rem); letter-spacing: -2px; color: #fff; line-height: 0.9; }
+
+        /* Navigation */
+        .vrasz-nav { padding: 25px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid #eee; }
+        .brand-logo { font-family: 'Syncopate', sans-serif; font-size: 1.2rem; letter-spacing: 5px; text-decoration: none; color: #000; font-weight: 900; }
+        
+        /* Product Cards */
+        .product-card { transition: 0.3s; border: none; margin-bottom: 50px; }
+        .img-wrapper { aspect-ratio: 3/4; overflow: hidden; background: #f9f9f9; border-radius: 2px; position: relative; }
+        .img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s; }
+        .product-card:hover img { transform: scale(1.05); }
+
+        /* Color Options */
+        .color-dot { width: 16px; height: 16px; border-radius: 50%; display: inline-block; margin-right: 8px; border: 1px solid #ddd; cursor: pointer; position: relative; }
+        .btn-check:checked + .color-dot::after { content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px; border: 1px solid #000; border-radius: 50%; }
+
+        /* Icons & Buttons */
+        .btn-add-icon { background: #000; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        .btn-add-icon:hover { background: var(--orange-btn); transform: scale(1.1); }
+        .cart-icon-wrapper { position: relative; cursor: pointer; }
+        .cart-count-badge { position: absolute; top: -5px; right: -8px; background: var(--orange-btn); color: #fff; font-size: 9px; font-weight: 900; padding: 2px 5px; border-radius: 10px; min-width: 18px; text-align: center; border: 2px solid #fff; }
+
+        /* Toast Notification */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; }
+        .modern-toast { background: #000; color: #fff; padding: 12px 20px; font-size: 10px; font-weight: 800; border-radius: 2px; margin-bottom: 10px; border-left: 4px solid var(--orange-btn); animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+        /* Checkout Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .checkout-card { background: #fff; padding: 40px; width: 100%; max-width: 450px; }
+        .modal-input { width: 100%; padding: 15px 0; border: none; border-bottom: 2px solid #eee; margin-bottom: 20px; font-size: 0.8rem; font-weight: 700; outline: none; transition: 0.3s; }
+        .modal-input:focus { border-color: #000; }
+        .btn-pay-now { width: 100%; background: #000; color: #fff; border: none; padding: 18px; font-weight: 900; font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; }
+
+        /* Cart View */
+        .cart-row { padding: 25px 0; border-bottom: 1px solid #eee; }
+        .cart-img { width: 90px; height: 120px; object-fit: cover; }
+        .fw-900 { font-weight: 900; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <div id="checkout-modal" class="modal-overlay" style="display:none;">
+        <div class="checkout-card text-center">
+            <h4 class="fw-900 mb-5" style="letter-spacing:-1px;">SHIPPING DETAILS</h4>
+            <input type="text" id="custName" class="modal-input" placeholder="FULL NAME">
+            <input type="email" id="custEmail" class="modal-input" placeholder="EMAIL ADDRESS">
+            <input type="tel" id="custPhone" class="modal-input" placeholder="PHONE NUMBER">
+            <div class="row g-2">
+                <div class="col-6"><input type="text" id="custState" class="modal-input" placeholder="STATE"></div>
+                <div class="col-6"><input type="text" id="custTown" class="modal-input" placeholder="TOWN/CITY"></div>
+            </div>
+            <button onclick="window.startPaystackProcess()" class="btn-pay-now mt-4">PAY NOW</button>
+            <p class="mt-4 small text-muted pointer" onclick="document.getElementById('checkout-modal').style.display='none'">GO BACK</p>
+        </div>
+    </div>
+
+    <nav class="vrasz-nav d-flex justify-content-between align-items-center">
+        <a href="#" class="brand-logo" onclick="showShop()" style="font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;">Maya<span style="font-family: cursive;">Allure</span></a>
+        <div class="cart-icon-wrapper" onclick="showCartPage()">
+            <i class="bi bi-cart-fill fs-4"></i> <span id="cart-count" class="cart-count-badge">0</span>
+        </div>
+    </nav>
+
+    <main id="shop-view">
+        <section class="hero-section">
+            <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=2000&auto=format&fit=crop" class="hero-img">
+            <div class="hero-overlay">
+                <h1 class="hero-title">ESSENTIALS<br>’26</h1>
+            </div>
+        </section>
+
+        <div class="container">
+            <div class="row" id="shop-grid"></div>
+        </div>
+    </main>
+
+    <main id="cart-view" class="container mt-5 hidden">
+        <h1 class="fw-900 mb-5">YOUR CART</h1>
+        <div id="cart-items-container"></div>
+        
+        <div class="row mt-5 pb-5">
+            <div class="col-md-5 offset-md-7">
+                <div class="d-flex justify-content-between mb-2 small fw-bold"><span>SUBTOTAL</span> <span id="cart-subtotal">₦0</span></div>
+                <div class="d-flex justify-content-between mb-4 h3 fw-900"><span>TOTAL</span> <span id="cart-total">₦0</span></div>
+                <button class="btn-pay-now" onclick="proceedToCheckout()">CHECKOUT</button>
+                <button class="btn btn-link w-100 mt-2 text-dark fw-bold text-decoration-none small" onclick="showShop()">CONTINUE SHOPPING</button>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, update, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAP5BADrbyPaeR8WYVzZToWabxeVBDTo5I",
+        databaseURL: "https://client-b83b3-default-rtdb.firebaseio.com/",
+        projectId: "client-b83b3"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let cart = JSON.parse(localStorage.getItem('vrasz_bag')) || [];
+
+    window.notify = (msg) => {
+        const container = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = 'modern-toast';
+        t.innerText = msg.toUpperCase();
+        container.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    };
+
+    const updateCartUI = () => {
+        const count = document.getElementById('cart-count');
+        if(count) count.innerText = cart.length;
+        localStorage.setItem('vrasz_bag', JSON.stringify(cart));
+    };
+
+    window.showShop = () => {
+        document.getElementById('shop-view').classList.remove('hidden');
+        document.getElementById('cart-view').classList.add('hidden');
+        // Update document title if needed
+        document.title = "MAYA ALLURE | OFFICIAL STORE";
+    };
+
+    window.showCartPage = () => {
+        document.getElementById('shop-view').classList.add('hidden');
+        document.getElementById('cart-view').classList.remove('hidden');
+        renderCartItems();
+    };
+
+    // --- RENDER PRODUCTS WITH STOCK DISPLAY ---
+    onValue(ref(db, 'products'), (snapshot) => {
+        const grid = document.getElementById('shop-grid');
+        if(!grid) return;
+        grid.innerHTML = "";
+        snapshot.forEach((child) => {
+            const p = child.val();
+            const id = child.key;
+            const colors = p.colors ? p.colors.split(',') : ['Default'];
+            
+            const isOutOfStock = p.stock <= 0;
+            const stockStatus = isOutOfStock 
+                ? `<span class="badge bg-danger mb-2">OUT OF STOCK</span>` 
+                : `<span class="badge bg-dark mb-2" style="font-size: 10px; opacity: 0.7;">${p.stock} IN STOCK</span>`;
+
+            const colorHtml = colors.map((c, i) => `
+                <input type="radio" class="btn-check" name="clr-${id}" id="clr-${id}-${i}" value="${c.trim()}" ${i==0?'checked':''}>
+                <label class="color-dot" style="background:${c.trim().toLowerCase()}" for="clr-${id}-${i}"></label>
+            `).join('');
+
+            grid.innerHTML += `
+                <div class="col-md-4">
+                    <div class="product-card ${isOutOfStock ? 'opacity-75' : ''}">
+                        <div class="img-wrapper">
+                            <img src="${p.image}" style="${isOutOfStock ? 'filter: grayscale(1);' : ''}">
+                        </div>
+                        <div class="pt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-900 text-uppercase">${p.name}</span>
+                                <span class="small fw-bold">₦${p.price.toLocaleString()}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex flex-column">
+                                    ${stockStatus}
+                                    <div class="d-flex align-items-center">${colorHtml}</div>
+                                </div>
+                                <button class="btn-add-icon" 
+                                   ${isOutOfStock ? 'disabled style="background:#ccc; cursor:not-allowed;"' : ''}
+                                   onclick="window.addToCart('${id}', '${p.name.replace(/'/g, "\\'")}', ${p.price}, '${p.image}')">
+                                   <i class="bi bi-cart-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        updateCartUI();
+    });
+
+    window.addToCart = (id, name, price, img) => {
+        const colorInput = document.querySelector(`input[name="clr-${id}"]:checked`);
+        const color = colorInput ? colorInput.value : 'Default';
+        cart.push({ id, name, price, img, color });
+        updateCartUI();
+        notify(`${name} ADDED TO BAG`);
+    };
+
+    window.renderCartItems = () => {
+        const container = document.getElementById('cart-items-container');
+        if(cart.length === 0) {
+            container.innerHTML = "<p class='py-5 text-muted fw-bold text-center'>YOUR BAG IS EMPTY.</p>";
+            document.getElementById('cart-subtotal').innerText = "₦0";
+            document.getElementById('cart-total').innerText = "₦0";
+            return;
+        }
+        
+        container.innerHTML = cart.map((item, i) => `
+            <div class="row cart-row mx-0 align-items-center mb-3">
+                <div class="col-3 col-md-2"><img src="${item.img}" style="width:100%; border-radius:4px;"></div>
+                <div class="col-7 col-md-8">
+                    <h6 class="fw-900 mb-0 text-uppercase">${item.name}</h6>
+                    <small class="text-muted">${item.color}</small>
+                    <p class="fw-bold mt-1 mb-0">₦${item.price.toLocaleString()}</p>
+                </div>
+                <div class="col-2 text-end"><i class="bi bi-trash3 pointer" onclick="window.removeItem(${i})"></i></div>
+            </div>`).join('');
+        
+        const totalSum = cart.reduce((s, item) => s + Number(item.price), 0);
+        document.getElementById('cart-subtotal').innerText = `₦${totalSum.toLocaleString()}`;
+        document.getElementById('cart-total').innerText = `₦${totalSum.toLocaleString()}`;
+    };
+
+    window.removeItem = (i) => {
+        cart.splice(i, 1);
+        updateCartUI();
+        renderCartItems();
+    };
+
+    window.proceedToCheckout = () => {
+        if(cart.length === 0) return notify("BAG IS EMPTY");
+        document.getElementById('checkout-modal').style.display = 'flex';
+    };
+
+    // --- UPDATED PAYMENT LOGIC WITH STOCK REDUCTION ---
+    window.startPaystackProcess = () => {
+        const details = {
+            email: document.getElementById('custEmail').value,
+            name: document.getElementById('custName').value,
+            phone: document.getElementById('custPhone').value,
+            state: document.getElementById('custState').value,
+            town: document.getElementById('custTown').value
+        };
+
+        if(!details.email || !details.name || !details.phone) return alert("Required fields missing");
+
+        const total = cart.reduce((s, item) => s + Number(item.price), 0);
+        const paystack = new PaystackPop();
+        
+        paystack.newTransaction({
+            key: 'pk_test_30fabe31b31843a69c0b2080e93fc8a66f68b289',
+            email: details.email,
+            amount: total * 100,
+            onSuccess: (trx) => {
+                cart.forEach(item => {
+                    // 1. Log the order for Admin Panel
+                    push(ref(db, 'orders'), {
+                        ...details,
+                        location: `${details.town}, ${details.state}`,
+                        name: item.name, 
+                        color: item.color, 
+                        price: item.price,
+                        status: 'paid', 
+                        reference: trx.reference, 
+                        date: Date.now()
+                    });
+
+                    // 2. STOCK REDUCTION LOGIC
+                    update(ref(db, `products/${item.id}`), {
+                        stock: increment(-1)
+                    });
+                });
+
+                // Clear everything
+                cart = [];
+                localStorage.removeItem('vrasz_bag');
+                updateCartUI();
+                notify("MAYA ALLURE: PAYMENT SUCCESSFUL");
+                setTimeout(() => window.location.reload(), 1500);
+            },
+            onCancel: () => {
+                notify("PAYMENT CANCELLED");
+            }
+        });
+    };
+
+    updateCartUI();
+</script>
+</body>
+</html>
