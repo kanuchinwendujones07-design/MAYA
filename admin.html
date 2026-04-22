@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maya's Dasboard | ADMIN PANEL</title>
+    <title>Maya's Dashboard | ADMIN PANEL</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -80,12 +80,12 @@
     <div id="overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <header class="mobile-header">
-        <span style="font-family:'Syncopate'; letter-spacing:2px; font-size:0.9rem;">VRA.SZ</span>
+        <span style="font-family:'Syncopate'; letter-spacing:2px; font-size:0.9rem;">MAYA ALLURE</span>
         <i class="bi bi-list fs-2" onclick="toggleSidebar()"></i>
     </header>
 
     <div class="sidebar" id="sidebar">
-        <a href="#" class="sidebar-brand">Maya's Dasboard</a>
+        <a href="#" class="sidebar-brand">MAYA ALLURE</a>
         <nav class="nav flex-column">
             <button class="nav-link active" id="nav-upload" onclick="showTab('upload')"><i class="bi bi-cloud-arrow-up"></i> STOREFRONT</button>
             <button class="nav-link" id="nav-orders" onclick="showTab('orders')"><i class="bi bi-cart-check"></i> ORDERS</button>
@@ -107,7 +107,7 @@
                         </div>
                         <input type="text" id="pColors" class="form-control" placeholder="COLORS (e.g. Black, White)">
                         <label class="small text-muted mb-2 fw-bold">PRODUCT IMAGE</label>
-                        <input type="file" id="pImage" class="form-control">
+                        <input type="file" id="pImage" class="form-control" accept="image/*">
                         <button id="uploadBtn" class="btn-upload">PUSH TO STORE</button>
                     </div>
                 </div>
@@ -192,7 +192,7 @@
         });
 
         window.deleteProduct = (id) => {
-            if(confirm("Permanently remove this item?")) {
+            if(confirm("Permanently remove this item from Maya Allure?")) {
                 remove(ref(db, `products/${id}`));
                 notifyAdmin("Product Deleted");
             }
@@ -226,7 +226,7 @@
                     image: data.data.url
                 });
                 
-                notifyAdmin("Stock Updated Live");
+                notifyAdmin("Maya Allure Inventory Updated");
                 document.querySelectorAll('input').forEach(i => i.value = "");
             } catch (e) { notifyAdmin("Upload Error"); }
             btn.innerHTML = "PUSH TO STORE"; btn.disabled = false;
