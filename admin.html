@@ -127,152 +127,180 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAP5BADrbyPaeR8WYVzZToWabxeVBDTo5I",
-            databaseURL: "https://client-b83b3-default-rtdb.firebaseio.com/",
-            projectId: "client-b83b3"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+    const firebaseConfig = {
+        apiKey: "AIzaSyAP5BADrbyPaeR8WYVzZToWabxeVBDTo5I",
+        databaseURL: "https://client-b83b3-default-rtdb.firebaseio.com/",
+        projectId: "client-b83b3"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-        // Sidebar & UI Helpers
-        window.toggleSidebar = () => {
-            document.getElementById('sidebar').classList.toggle('active');
-            document.getElementById('overlay').classList.toggle('active');
-        };
+    // Sidebar & UI Helpers
+    window.toggleSidebar = () => {
+        document.getElementById('sidebar').classList.toggle('active');
+        document.getElementById('overlay').classList.toggle('active');
+    };
 
-        window.notifyAdmin = (msg) => {
-            const container = document.getElementById('toast-container');
-            const t = document.createElement('div');
-            t.className = 'admin-toast';
-            t.innerHTML = `<i class="bi bi-info-circle-fill me-2"></i> ${msg.toUpperCase()}`;
-            container.appendChild(t);
-            setTimeout(() => {
-                t.style.opacity = '0';
-                t.style.transform = 'translateX(20px)';
-                t.style.transition = '0.4s';
-                setTimeout(() => t.remove(), 400);
-            }, 3000);
-        };
+    window.notifyAdmin = (msg) => {
+        const container = document.getElementById('toast-container');
+        if(!container) return;
+        const t = document.createElement('div');
+        t.className = 'admin-toast';
+        t.innerHTML = `<i class="bi bi-info-circle-fill me-2"></i> ${msg.toUpperCase()}`;
+        container.appendChild(t);
+        setTimeout(() => {
+            t.style.opacity = '0';
+            t.style.transform = 'translateX(20px)';
+            t.style.transition = '0.4s';
+            setTimeout(() => t.remove(), 400);
+        }, 3000);
+    };
 
-        window.showTab = (tab) => {
-            document.getElementById('upload-section').style.display = tab === 'upload' ? 'block' : 'none';
-            document.getElementById('orders-section').style.display = tab === 'orders' ? 'block' : 'none';
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.getElementById('nav-' + tab).classList.add('active');
+    window.showTab = (tab) => {
+        document.getElementById('upload-section').style.display = tab === 'upload' ? 'block' : 'none';
+        document.getElementById('orders-section').style.display = tab === 'orders' ? 'block' : 'none';
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        const activeLink = document.getElementById('nav-' + tab);
+        if(activeLink) activeLink.classList.add('active');
+        
+        if (window.innerWidth < 992 && document.getElementById('sidebar').classList.contains('active')) {
+            toggleSidebar();
+        }
+    };
+
+    // --- 1. SAFE INVENTORY LOGIC ---
+    onValue(ref(db, 'products'), (snapshot) => {
+        const list = document.getElementById('inventory-list');
+        if(!list) return;
+        list.innerHTML = "";
+        if(!snapshot.exists()) return list.innerHTML = "<p class='text-muted small'>No items live.</p>";
+        
+        snapshot.forEach((child) => {
+            const p = child.val();
+            // SAFETY CHECK: Prevents the toUpperCase() error if name is missing
+            const rawName = p.name || "Unnamed Product";
+            const displayName = rawName.toUpperCase();
+            const displayPrice = p.price ? Number(p.price).toLocaleString() : "0";
             
-            if (window.innerWidth < 992 && document.getElementById('sidebar').classList.contains('active')) {
-                toggleSidebar();
-            }
-        };
-
-        // --- 1. INVENTORY LOGIC ---
-        onValue(ref(db, 'products'), (snapshot) => {
-            const list = document.getElementById('inventory-list');
-            list.innerHTML = "";
-            if(!snapshot.exists()) return list.innerHTML = "<p class='text-muted small'>No items live.</p>";
-            
-            snapshot.forEach((child) => {
-                const p = child.val();
-                list.innerHTML += `
-                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                        <div class="d-flex align-items-center">
-                            <img src="${p.image}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 15px;">
-                            <div>
-                                <h6 class="mb-0 fw-bold small">${p.name.toUpperCase()}</h6>
-                                <small class="text-muted">₦${p.price.toLocaleString()} • <b>${p.stock || 0} IN STOCK</b></small>
-                            </div>
+            list.innerHTML += `
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <img src="${p.image || ''}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 15px;">
+                        <div>
+                            <h6 class="mb-0 fw-bold small">${displayName}</h6>
+                            <small class="text-muted">₦${displayPrice} • <b>${p.stock || 0} IN STOCK</b></small>
                         </div>
-                        <button onclick="window.deleteProduct('${child.key}')" class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-trash"></i></button>
-                    </div>`;
-            });
+                    </div>
+                    <button onclick="window.deleteProduct('${child.key}')" class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-trash"></i></button>
+                </div>`;
         });
+    });
 
-        window.deleteProduct = (id) => {
-            if(confirm("Permanently remove this item from Maya Allure?")) {
-                remove(ref(db, `products/${id}`));
-                notifyAdmin("Product Deleted");
-            }
-        };
+    window.deleteProduct = (id) => {
+        if(confirm("Permanently remove this item?")) {
+            remove(ref(db, `products/${id}`));
+            notifyAdmin("Product Deleted");
+        }
+    };
 
-        // --- 2. UPLOAD LOGIC ---
-        document.getElementById('uploadBtn').onclick = async () => {
-            const btn = document.getElementById('uploadBtn');
-            const file = document.getElementById('pImage').files[0];
-            const name = document.getElementById('pName').value;
-            const price = document.getElementById('pPrice').value;
-            const stock = document.getElementById('pStock').value;
+    // --- 2. UPLOAD LOGIC ---
+    document.getElementById('uploadBtn').onclick = async () => {
+        const btn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('pImage');
+        const file = fileInput.files[0];
+        const name = document.getElementById('pName').value;
+        const price = document.getElementById('pPrice').value;
+        const stock = document.getElementById('pStock').value;
+        const colors = document.getElementById('pColors').value;
 
-            if(!file || !name || !price || !stock) return notifyAdmin("Fill all fields");
-            
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> PUSHING...';
-            btn.disabled = true;
-            
-            const formData = new FormData();
-            formData.append("image", file);
-            
-            try {
-                const res = await fetch("https://api.imgbb.com/1/upload?key=6ae309e5e122f3aca2f9142fc3b2bd0a", { method: "POST", body: formData });
-                const data = await res.json();
+        if(!file || !name || !price || !stock) return notifyAdmin("Fill all fields");
+        
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> PUSHING...';
+        btn.disabled = true;
+        
+        const formData = new FormData();
+        formData.append("image", file);
+        
+        try {
+            const res = await fetch("https://api.imgbb.com/1/upload?key=6ae309e5e122f3aca2f9142fc3b2bd0a", { method: "POST", body: formData });
+            const data = await res.json();
 
-                await set(push(ref(db, 'products')), {
-                    name, 
-                    price: Number(price),
-                    stock: Number(stock),
-                    colors: document.getElementById('pColors').value,
-                    image: data.data.url
-                });
-                
-                notifyAdmin("Maya Allure Inventory Updated");
-                document.querySelectorAll('input').forEach(i => i.value = "");
-            } catch (e) { notifyAdmin("Upload Error"); }
-            btn.innerHTML = "PUSH TO STORE"; btn.disabled = false;
-        };
+            if(!data.success) throw new Error("Image upload failed");
 
-        // --- 3. ORDERS LOGIC ---
-        onValue(ref(db, 'orders'), (snapshot) => {
-            const list = document.getElementById('orders-list');
-            list.innerHTML = "";
-            if(!snapshot.exists()) return list.innerHTML = "<div class='admin-card text-center text-muted'>NO ACTIVE ORDERS</div>";
-
-            snapshot.forEach((child) => {
-                const o = child.val();
-                const id = child.key;
-                
-                list.innerHTML += `
-                    <div class="order-row">
-                        <div class="order-grid">
-                            <div>
-                                <span class="status-badge status-${o.status}">${o.status}</span>
-                                <h6 class="fw-800 mb-1 text-uppercase">${o.name} <span class="text-muted small">(${o.color})</span></h6>
-                                <div class="small fw-bold">₦${Number(o.price).toLocaleString()}</div>
-                            </div>
-                            <div class="text-end text-end-md">
-                                ${o.status === 'paid' ? 
-                                    `<button onclick="window.approveOrder('${id}')" class="btn-approve">APPROVE</button>` : 
-                                    `<i class="bi bi-check-circle-fill text-success fs-5"></i>`}
-                            </div>
-                        </div>
-                        
-                        <div class="cust-details">
-                            <div class="row g-2">
-                                <div class="col-md-4"><i class="bi bi-person"></i> ${o.customer || o.name_cust || 'Name Missing'}</div>
-                                <div class="col-md-4"><i class="bi bi-envelope"></i> ${o.email}</div>
-                                <div class="col-md-4"><i class="bi bi-telephone"></i> ${o.phone}</div>
-                                <div class="col-12 mt-2"><i class="bi bi-geo-alt"></i> ${o.location}</div>
-                            </div>
-                        </div>
-                    </div>`;
+            await push(ref(db, 'products'), {
+                name: name, 
+                price: Number(price),
+                stock: Number(stock),
+                colors: colors,
+                image: data.data.url
             });
-        });
+            
+            notifyAdmin("Maya Allure Inventory Updated");
+            // Clear inputs
+            fileInput.value = "";
+            document.getElementById('pName').value = "";
+            document.getElementById('pPrice').value = "";
+            document.getElementById('pStock').value = "";
+            document.getElementById('pColors').value = "";
 
-        window.approveOrder = async (orderId) => {
-            await update(ref(db, `orders/${orderId}`), { status: 'shipped' });
-            notifyAdmin("Order approved for dispatch");
-        };
-    </script>
+        } catch (e) { 
+            console.error(e);
+            notifyAdmin("Upload Error: " + e.message); 
+        } finally {
+            btn.innerHTML = "PUSH TO STORE"; 
+            btn.disabled = false;
+        }
+    };
+
+    // --- 3. ORDERS LOGIC ---
+    onValue(ref(db, 'orders'), (snapshot) => {
+        const list = document.getElementById('orders-list');
+        if(!list) return;
+        list.innerHTML = "";
+        if(!snapshot.exists()) return list.innerHTML = "<div class='admin-card text-center text-muted'>NO ACTIVE ORDERS</div>";
+
+        snapshot.forEach((child) => {
+            const o = child.val();
+            const id = child.key;
+            
+            // Handle different possible name fields for safety
+            const customerName = o.name_cust || o.customer || o.name || "Unknown Customer";
+            const productName = o.productName || o.name || "Product";
+            
+            list.innerHTML += `
+                <div class="order-row">
+                    <div class="order-grid">
+                        <div>
+                            <span class="status-badge status-${o.status}">${o.status}</span>
+                            <h6 class="fw-800 mb-1 text-uppercase">${productName} <span class="text-muted small">(${o.color || 'N/A'})</span></h6>
+                            <div class="small fw-bold">₦${Number(o.price || 0).toLocaleString()}</div>
+                        </div>
+                        <div class="text-end text-end-md">
+                            ${o.status === 'paid' ? 
+                                `<button onclick="window.approveOrder('${id}')" class="btn-approve">APPROVE</button>` : 
+                                `<i class="bi bi-check-circle-fill text-success fs-5"></i>`}
+                        </div>
+                    </div>
+                    
+                    <div class="cust-details">
+                        <div class="row g-2">
+                            <div class="col-md-4"><i class="bi bi-person"></i> ${customerName}</div>
+                            <div class="col-md-4"><i class="bi bi-envelope"></i> ${o.email || 'N/A'}</div>
+                            <div class="col-md-4"><i class="bi bi-telephone"></i> ${o.phone || 'N/A'}</div>
+                            <div class="col-12 mt-2"><i class="bi bi-geo-alt"></i> ${o.location || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+    });
+
+    window.approveOrder = async (orderId) => {
+        await update(ref(db, `orders/${orderId}`), { status: 'shipped' });
+        notifyAdmin("Order approved for dispatch");
+    };
+</script>
 </body>
 </html>
