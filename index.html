@@ -144,7 +144,6 @@
     window.showShop = () => {
         document.getElementById('shop-view').classList.remove('hidden');
         document.getElementById('cart-view').classList.add('hidden');
-        // Update document title if needed
         document.title = "MAYA ALLURE | OFFICIAL STORE";
     };
 
@@ -154,7 +153,7 @@
         renderCartItems();
     };
 
-    // --- RENDER PRODUCTS WITH STOCK DISPLAY ---
+    // --- RENDER PRODUCTS WITH SMART STOCK DISPLAY ---
     onValue(ref(db, 'products'), (snapshot) => {
         const grid = document.getElementById('shop-grid');
         if(!grid) return;
@@ -164,10 +163,19 @@
             const id = child.key;
             const colors = p.colors ? p.colors.split(',') : ['Default'];
             
+            // SMART STOCK LOGIC: 
+            // 0 = Out of Stock, 1-9 = Show Count, 10+ = Just "In Stock"
             const isOutOfStock = p.stock <= 0;
-            const stockStatus = isOutOfStock 
-                ? `<span class="badge bg-danger mb-2">OUT OF STOCK</span>` 
-                : `<span class="badge bg-dark mb-2" style="font-size: 10px; opacity: 0.7;">${p.stock} IN STOCK</span>`;
+            const isLowStock = p.stock > 0 && p.stock < 10;
+            
+            let stockStatus = "";
+            if (isOutOfStock) {
+                stockStatus = `<span class="badge bg-danger mb-2">OUT OF STOCK</span>`;
+            } else if (isLowStock) {
+                stockStatus = `<span class="badge bg-warning text-dark mb-2" style="font-size: 10px; font-weight:800;">ONLY ${p.stock} LEFT</span>`;
+            } else {
+                stockStatus = `<span class="badge bg-dark mb-2" style="font-size: 10px; opacity: 0.7;">IN STOCK</span>`;
+            }
 
             const colorHtml = colors.map((c, i) => `
                 <input type="radio" class="btn-check" name="clr-${id}" id="clr-${id}-${i}" value="${c.trim()}" ${i==0?'checked':''}>
@@ -247,7 +255,7 @@
         document.getElementById('checkout-modal').style.display = 'flex';
     };
 
-    // --- UPDATED PAYMENT LOGIC WITH STOCK REDUCTION ---
+    // --- PAYMENT & STOCK REDUCTION LOGIC ---
     window.startPaystackProcess = () => {
         const details = {
             email: document.getElementById('custEmail').value,
@@ -268,7 +276,7 @@
             amount: total * 100,
             onSuccess: (trx) => {
                 cart.forEach(item => {
-                    // 1. Log the order for Admin Panel
+                    // 1. Log Order for Admin
                     push(ref(db, 'orders'), {
                         ...details,
                         location: `${details.town}, ${details.state}`,
@@ -280,17 +288,16 @@
                         date: Date.now()
                     });
 
-                    // 2. STOCK REDUCTION LOGIC
+                    // 2. Reduce Stock in Firebase
                     update(ref(db, `products/${item.id}`), {
                         stock: increment(-1)
                     });
                 });
 
-                // Clear everything
                 cart = [];
                 localStorage.removeItem('vrasz_bag');
                 updateCartUI();
-                notify("MAYA ALLURE: PAYMENT SUCCESSFUL");
+                notify("MAYA ALLURE: ORDER PLACED");
                 setTimeout(() => window.location.reload(), 1500);
             },
             onCancel: () => {
@@ -301,5 +308,6 @@
 
     updateCartUI();
 </script>
+
 </body>
 </html>
