@@ -112,7 +112,7 @@
         </div>
     </main>
 
-    <script type="module">
+   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, update, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -128,6 +128,7 @@
 
     window.notify = (msg) => {
         const container = document.getElementById('toast-container');
+        if(!container) return;
         const t = document.createElement('div');
         t.className = 'modern-toast';
         t.innerText = msg.toUpperCase();
@@ -153,26 +154,37 @@
         renderCartItems();
     };
 
-    // --- RENDER PRODUCTS WITH SMART STOCK DISPLAY ---
+    // --- RENDER PRODUCTS WITH CRASH PROTECTION ---
     onValue(ref(db, 'products'), (snapshot) => {
         const grid = document.getElementById('shop-grid');
         if(!grid) return;
         grid.innerHTML = "";
+        
+        if (!snapshot.exists()) {
+            grid.innerHTML = "<p class='text-center w-100 py-5'>NO PRODUCTS AVAILABLE YET.</p>";
+            return;
+        }
+
         snapshot.forEach((child) => {
             const p = child.val();
             const id = child.key;
+            
+            // Safety: Handle missing names or data to prevent the 'toUpperCase' error
+            const rawName = p.name || "New Item";
+            const safeName = rawName.toUpperCase();
+            const safePrice = p.price ? p.price.toLocaleString() : "0";
             const colors = p.colors ? p.colors.split(',') : ['Default'];
             
-            // SMART STOCK LOGIC: 
-            // 0 = Out of Stock, 1-9 = Show Count, 10+ = Just "In Stock"
-            const isOutOfStock = p.stock <= 0;
-            const isLowStock = p.stock > 0 && p.stock < 10;
+            // Stock Logic: Hide exact numbers above 10
+            const currentStock = p.stock || 0;
+            const isOutOfStock = currentStock <= 0;
+            const isLowStock = currentStock > 0 && currentStock < 10;
             
             let stockStatus = "";
             if (isOutOfStock) {
                 stockStatus = `<span class="badge bg-danger mb-2">OUT OF STOCK</span>`;
             } else if (isLowStock) {
-                stockStatus = `<span class="badge bg-warning text-dark mb-2" style="font-size: 10px; font-weight:800;">ONLY ${p.stock} LEFT</span>`;
+                stockStatus = `<span class="badge bg-warning text-dark mb-2" style="font-size: 10px; font-weight:800;">ONLY ${currentStock} LEFT</span>`;
             } else {
                 stockStatus = `<span class="badge bg-dark mb-2" style="font-size: 10px; opacity: 0.7;">IN STOCK</span>`;
             }
@@ -186,12 +198,12 @@
                 <div class="col-md-4">
                     <div class="product-card ${isOutOfStock ? 'opacity-75' : ''}">
                         <div class="img-wrapper">
-                            <img src="${p.image}" style="${isOutOfStock ? 'filter: grayscale(1);' : ''}">
+                            <img src="${p.image || ''}" style="${isOutOfStock ? 'filter: grayscale(1);' : ''}">
                         </div>
                         <div class="pt-3">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="small fw-900 text-uppercase">${p.name}</span>
-                                <span class="small fw-bold">₦${p.price.toLocaleString()}</span>
+                                <span class="small fw-900 text-uppercase">${safeName}</span>
+                                <span class="small fw-bold">₦${safePrice}</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex flex-column">
@@ -200,7 +212,7 @@
                                 </div>
                                 <button class="btn-add-icon" 
                                    ${isOutOfStock ? 'disabled style="background:#ccc; cursor:not-allowed;"' : ''}
-                                   onclick="window.addToCart('${id}', '${p.name.replace(/'/g, "\\'")}', ${p.price}, '${p.image}')">
+                                   onclick="window.addToCart('${id}', '${rawName.replace(/'/g, "\\'")}', ${p.price || 0}, '${p.image || ''}')">
                                    <i class="bi bi-cart-plus"></i>
                                 </button>
                             </div>
@@ -234,7 +246,7 @@
                 <div class="col-7 col-md-8">
                     <h6 class="fw-900 mb-0 text-uppercase">${item.name}</h6>
                     <small class="text-muted">${item.color}</small>
-                    <p class="fw-bold mt-1 mb-0">₦${item.price.toLocaleString()}</p>
+                    <p class="fw-bold mt-1 mb-0">₦${Number(item.price).toLocaleString()}</p>
                 </div>
                 <div class="col-2 text-end"><i class="bi bi-trash3 pointer" onclick="window.removeItem(${i})"></i></div>
             </div>`).join('');
@@ -255,7 +267,6 @@
         document.getElementById('checkout-modal').style.display = 'flex';
     };
 
-    // --- PAYMENT & STOCK REDUCTION LOGIC ---
     window.startPaystackProcess = () => {
         const details = {
             email: document.getElementById('custEmail').value,
@@ -276,7 +287,6 @@
             amount: total * 100,
             onSuccess: (trx) => {
                 cart.forEach(item => {
-                    // 1. Log Order for Admin
                     push(ref(db, 'orders'), {
                         ...details,
                         location: `${details.town}, ${details.state}`,
@@ -288,7 +298,6 @@
                         date: Date.now()
                     });
 
-                    // 2. Reduce Stock in Firebase
                     update(ref(db, `products/${item.id}`), {
                         stock: increment(-1)
                     });
@@ -308,6 +317,5 @@
 
     updateCartUI();
 </script>
-
 </body>
 </html>
